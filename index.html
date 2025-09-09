@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隨機亂數選取器 - CritterDash</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            min-height: 100vh;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #333;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 20px;
+            transition: padding 0.3s ease;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 2em;
+        }
+
+        #toggleSettingsButton {
+            background: none;
+            border: 1px solid #ccc;
+            color: #555;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #toggleSettingsButton:hover {
+            background-color: #f1f1f1;
+            border-color: #aaa;
+        }
+
+        #settingsPanel {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, opacity 0.3s ease-out, margin-top 0.4s ease-out;
+            margin-top: 0;
+        }
+
+        #settingsPanel.expanded {
+            max-height: 500px; /* Adjust as needed */
+            opacity: 1;
+            margin-top: 25px;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .input-group label {
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        .input-group input[type="number"],
+        .input-group input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input[type="number"]:focus,
+        .input-group input[type="text"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        
+        .input-error {
+            border-color: #d9534f !important;
+            box-shadow: 0 0 5px rgba(217, 83, 79, 0.5);
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        button {
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #startButton {
+            background-color: #28a745;
+        }
+        #startButton:hover {
+            background-color: #218838;
+        }
+
+        #restartButton {
+            background-color: #007bff;
+            display: none; /* Initially hidden */
+        }
+        #restartButton:hover {
+            background-color: #0056b3;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .race-track-container {
+            width: 100%;
+            max-width: 1200px;
+            background-color: #e0ffe0;
+            border: 5px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px; /* Ensure visibility even with no animals */
+            margin-top: 20px;
+        }
+
+        .race-track {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            height: 100%;
+        }
+
+        .finish-line {
+            position: absolute;
+            right: 15px;
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            background: repeating-linear-gradient(
+                45deg,
+                #333,
+                #333 5px,
+                #fff 5px,
+                #fff 10px
+            );
+            z-index: 1;
+        }
+
+        .animal {
+            position: absolute;
+            left: 15px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            transition: background-color 0.3s ease, transform 0.2s linear;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 2;
+            white-space: nowrap; /* Prevent text wrapping */
+            overflow: hidden; /* Hide overflow if text is too long */
+            text-overflow: ellipsis; /* Add ellipsis if text is too long */
+        }
+
+        .animal span {
+            font-size: 0.5em; /* Smaller font for the number/option */
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .results {
+            margin-top: 30px;
+            background-color: #e6f7ff;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #91d5ff;
+            width: 100%;
+            max-width: 1200px;
+            box-sizing: border-box;
+        }
+
+        .results h2 {
+            color: #1890ff;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .results p {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .results .winner {
+            font-weight: bold;
+            color: #d4380d;
+            font-size: 1.4em;
+        }
+
+        .results-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+            text-align: left;
+        }
+        .results-list li {
+            padding: 6px 10px;
+            font-size: 1.1em;
+            border-bottom: 1px solid #d1eaff;
+            border-radius: 4px;
+        }
+        .results-list li:last-child {
+            border-bottom: none;
+        }
+        .rank-first {
+            background-color: #fffbe6;
+            color: #d4380d;
+            font-weight: bold;
+        }
+        .rank-last {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            opacity: 0.9;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px 40px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.visible .modal-content {
+            transform: scale(1);
+        }
+
+        #modalTitle {
+            font-size: 2em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        #modalRankings {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        #modalRankings li {
+            font-size: 1.2em;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        #modalRankings li:last-child {
+            border-bottom: none;
+        }
+        #modalRankings .winner-first {
+            font-weight: bold;
+            color: #d4380d;
+        }
+        #modalLastPlace {
+            font-size: 1.1em;
+            padding: 10px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        #closeModalButton {
+            background-color: #6c757d;
+            font-size: 1em;
+            padding: 10px 25px;
+        }
+        #closeModalButton:hover {
+            background-color: #5a6268;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8em; }
+            .container { padding: 20px; }
+            .input-group { align-items: center; }
+            .input-group input[type="number"], .input-group input[type="text"] { width: 100%; }
+            button { padding: 12px 25px; font-size: 1.1em; }
+            .race-track-container { padding: 10px; min-height: 150px; }
+            .animal { width: 40px; height: 40px; font-size: 1.5em; }
+            .animal span { font-size: 0.4em; }
+            .finish-line { width: 8px; }
+            .results { padding: 15px; }
+            .results h2 { font-size: 1.5em; }
+            .results p { font-size: 1em; }
+            .results .winner { font-size: 1.2em; }
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.5em; }
+            .container { padding: 15px; }
+            .input-group label { font-size: 1em; }
+            button { padding: 10px 20px; font-size: 1em; }
+            .race-track-container { min-height: 120px; }
+            .animal { width: 35px; height: 35px; font-size: 1.2em; }
+            .animal span { font-size: 0.35em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="settings-header" id="settingsHeader">
+            <h1>隨機亂數選取器</h1>
+            <button id="toggleSettingsButton">顯示設定</button>
+        </div>
+
+        <div id="settingsPanel">
+            <div class="input-group">
+                <label for="numAnimals">參賽動物數量 (最少3位):</label>
+                <input type="number" id="numAnimals" value="5" min="3" max="10">
+            </div>
+
+            <div class="input-group">
+                <label for="optionsInput">數字範圍 / 選項 (例如: 1-100 或 蘋果,香蕉,橘子):</label>
+                <input type="text" id="optionsInput" value="1-5">
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="startButton">啟動競賽！</button>
+            <button id="restartButton">再玩一次</button>
+        </div>
+    </div>
+
+    <div class="race-track-container">
+        <div class="race-track" id="raceTrack">
+            <div class="finish-line"></div>
+        </div>
+    </div>
+
+    <div class="results" id="results">
+        <h2>競賽結果</h2>
+        <div id="winnerDisplay"><p>等待競賽開始...</p></div>
+    </div>
+
+    <div class="modal-overlay" id="resultsModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">競賽排名</h2>
+            <ul id="modalRankings"></ul>
+            <p id="modalLastPlace"></p>
+            <button id="closeModalButton">關閉</button>
+        </div>
+    </div>
+
+    <script>
+        const settingsHeader = document.getElementById('settingsHeader');
+        const toggleSettingsButton = document.getElementById('toggleSettingsButton');
+        const settingsPanel = document.getElementById('settingsPanel');
+
+        const numAnimalsInput = document.getElementById('numAnimals');
+        const optionsInput = document.getElementById('optionsInput');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const raceTrack = document.getElementById('raceTrack');
+        const winnerDisplay = document.getElementById('winnerDisplay');
+        
+        const resultsModal = document.getElementById('resultsModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalRankings = document.getElementById('modalRankings');
+        const modalLastPlace = document.getElementById('modalLastPlace');
+        const closeModalButton = document.getElementById('closeModalButton');
+
+        const animalEmojis = ['🐰', '🐢', '🐥', '🦊', '🐼', '🐸', '🐷', '🐶', '🐱', '🐻'];
+        const animalColors = ['#ff6347', '#4682b4', '#3cb371', '#ffa500', '#9370db', '#20b2aa', '#ff69b4', '#8a2be2', '#dc143c', '#00ced1'];
+
+        let animals = [];
+        let animationFrameId;
+        let raceActive = false;
+        let finishLineX; 
+
+        // --- Scripting & Timing Variables ---
+        let raceStartTime = 0;
+        const MIN_RACE_DURATION_MS = 10000;
+        let storyAct1Triggered = false;
+        let storyAct2Triggered = false;
+        let lastTwoScenarioActive = false;
+
+
+        function calculateFinishLine() {
+            finishLineX = raceTrack.offsetWidth - 65; 
+        }
+
+        function getRandomColor(excludeColors = []) {
+            let color;
+            do {
+                color = animalColors[Math.floor(Math.random() * animalColors.length)];
+            } while (excludeColors.includes(color));
+            return color;
+        }
+
+        function parseOptions(input) {
+            const rangeMatch = input.match(/^(\d+)-(\d+)$/);
+            if (rangeMatch) {
+                const min = parseInt(rangeMatch[1]);
+                const max = parseInt(rangeMatch[2]);
+                if (min < max) {
+                    return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+                }
+            }
+            return input.split(',').map(s => s.trim()).filter(s => s !== '');
+        }
+        
+        function clearInputErrors() {
+            numAnimalsInput.classList.remove('input-error');
+            optionsInput.classList.remove('input-error');
+        }
+
+        function initializeRace() {
+            if (raceActive) return;
+            
+            clearInputErrors();
+            calculateFinishLine();
+
+            // Reset script flags
+            raceStartTime = performance.now();
+            storyAct1Triggered = false;
+            storyAct2Triggered = false;
+            lastTwoScenarioActive = false;
+
+            const numAnimals = parseInt(numAnimalsInput.value);
+            const options = parseOptions(optionsInput.value);
+            let isValid = true;
+
+            if (numAnimals < 3) {
+                winnerDisplay.innerHTML = '<p>戲劇性的比賽最少需要3位參賽者！</p>';
+                numAnimalsInput.classList.add('input-error');
+                isValid = false;
+            }
+
+            if (isValid && options.length === 0) {
+                winnerDisplay.innerHTML = '<p>請輸入有效的選項！</p>';
+                optionsInput.classList.add('input-error');
+                isValid = false;
+            }
+
+            if (isValid && numAnimals > options.length) {
+                winnerDisplay.innerHTML = `<p>參賽動物數量 (${numAnimals}) 不能多於選項數量 (${options.length})！</p>`;
+                numAnimalsInput.classList.add('input-error');
+                optionsInput.classList.add('input-error');
+                isValid = false;
+            }
+
+            if (!isValid) {
+                if (!settingsPanel.classList.contains('expanded')) {
+                    toggleSettings();
+                }
+                return;
+            }
+            
+            raceActive = true;
+            startButton.disabled = true;
+            cancelAnimationFrame(animationFrameId);
+            raceTrack.innerHTML = '<div class="finish-line"></div>';
+            winnerDisplay.innerHTML = '<p>競賽進行中...</p>';
+
+            const shuffledOptions = options.sort(() => 0.5 - Math.random());
+            const selectedOptions = shuffledOptions.slice(0, numAnimals);
+
+            animals = [];
+            const trackHeight = raceTrack.offsetHeight;
+            const animalHeight = 50;
+            const spacing = (trackHeight - (numAnimals * animalHeight)) / (numAnimals + 1);
+            let currentY = spacing;
+            let usedColors = [];
+
+            for (let i = 0; i < numAnimals; i++) {
+                const animalDiv = document.createElement('div');
+                animalDiv.classList.add('animal');
+                const animalValue = selectedOptions[i];
+                const animalEmoji = animalEmojis[i % animalEmojis.length];
+                const animalColor = getRandomColor(usedColors);
+                usedColors.push(animalColor);
+
+                animalDiv.innerHTML = `${animalEmoji}<span>${animalValue}</span>`;
+                animalDiv.style.backgroundColor = animalColor;
+                animalDiv.style.top = `${currentY}px`;
+                animalDiv.dataset.value = animalValue;
+
+                raceTrack.appendChild(animalDiv);
+                animals.push({
+                    element: animalDiv,
+                    position: 15,
+                    speed: Math.random() * 1.5 + 1, // Base speed
+                    finished: false,
+                    finishTime: Infinity,
+                    value: animalValue,
+                    emoji: animalEmoji,
+                    role: 'none',
+                    isHeld: false 
+                });
+                currentY += animalHeight + spacing;
+            }
+
+            // --- Assign Roles for the Race Story (Condition #4) ---
+            let animalIndices = Array.from(Array(animals.length).keys());
+            let shuffledIndices = animalIndices.sort(() => 0.5 - Math.random());
+            
+            const winnerIndex = shuffledIndices[0];
+            const earlyLeaderIndex = shuffledIndices[1];
+            const midChallengerIndex = shuffledIndices[2];
+
+            animals[winnerIndex].role = 'winner';
+            animals[earlyLeaderIndex].role = 'earlyLeader';
+            animals[midChallengerIndex].role = 'midChallenger';
+
+            // Set initial speeds based on roles
+            animals[winnerIndex].speed = 1.2;
+            animals[earlyLeaderIndex].speed = 3.5;
+            animals[midChallengerIndex].speed = 1.5;
+
+            if (currentY > trackHeight) {
+                raceTrack.style.height = `${currentY + spacing}px`;
+            } else {
+                raceTrack.style.height = 'auto';
+            }
+
+            race();
+        }
+
+        // Condition #4: At least 2 overtakes
+        function runRaceStory() {
+            const racingAnimals = animals.filter(a => !a.finished);
+            if (racingAnimals.length < 2) return; 
+
+            const winner = animals.find(a => a.role === 'winner');
+            const earlyLeader = animals.find(a => a.role === 'earlyLeader');
+            const midChallenger = animals.find(a => a.role === 'midChallenger');
+
+            if (!winner || !earlyLeader || !midChallenger || winner.finished) return;
+
+            // Overtake 1: Mid-challenger overtakes the early leader
+            if (!storyAct1Triggered && earlyLeader.position > finishLineX * (Math.random() * 0.2 + 0.3)) { // 30%-50% of track
+                earlyLeader.speed = Math.random() * 0.5 + 0.5; 
+                midChallenger.speed = Math.random() * 2 + 3.5; 
+                storyAct1Triggered = true;
+            }
+
+            // Overtake 2: The winner's final comeback
+            const currentLeader = racingAnimals.reduce((p, c) => p.position > c.position ? p : c);
+            if (storyAct1Triggered && !storyAct2Triggered && currentLeader.position > finishLineX * (Math.random() * 0.15 + 0.7)) { // 70%-85% of track
+                winner.speed = Math.random() * 2 + 4.5; 
+                if (midChallenger.role !== 'winner') {
+                    midChallenger.speed = Math.random() * 1 + 1;
+                }
+                storyAct2Triggered = true;
+            }
+        }
+
+        // Condition #3: Maintain appropriate distance
+        function applyRubberBanding() {
+            const racingAnimals = animals.filter(a => !a.finished);
+            if (racingAnimals.length < 2) return;
+
+            const leader = racingAnimals.reduce((p, c) => p.position > c.position ? p : c);
+            const maxDistance = finishLineX * 0.5; // Max allowed separation
+
+            racingAnimals.forEach(animal => {
+                // Don't apply to scripted roles or special scenarios
+                if (animal.role !== 'none' || animal.isHeld || lastTwoScenarioActive) return;
+
+                const distanceToLeader = leader.position - animal.position;
+                if (distanceToLeader > maxDistance) {
+                    animal.speed += 0.05; // Gentle boost if falling behind
+                }
+            });
+        }
+
+        function race() {
+            const elapsedTime = performance.now() - raceStartTime;
+            const unfinishedAnimals = animals.filter(a => !a.finished);
+
+            // --- Apply Scripted Logic ---
+            if (!lastTwoScenarioActive) {
+                runRaceStory();
+            }
+            applyRubberBanding();
+
+            // --- Handle Last Two Runners Scenario (Conditions #1, #2) ---
+            if (unfinishedAnimals.length === 2 && animals.length > 2 && !lastTwoScenarioActive) {
+                lastTwoScenarioActive = true;
+                unfinishedAnimals.sort((a, b) => b.position - a.position);
+                const secondLast = unfinishedAnimals[0];
+                const last = unfinishedAnimals[1];
+                
+                // Slow down the second-to-last runner
+                secondLast.speed = 0.4; 
+                secondLast.isHeld = true; // Mark it for special handling
+
+                // Ensure the last runner can catch up
+                last.speed = Math.max(last.speed, 3.0);
+            }
+            
+            // --- Handle Last Runner Speed-up (Condition #6) ---
+            if (unfinishedAnimals.length === 1 && animals.length > 1) {
+                const lastRunner = unfinishedAnimals[0];
+                if (!lastRunner.isHeld) { // Don't speed up if it's the one waiting at the finish line
+                    lastRunner.speed = Math.max(lastRunner.speed, 6.0);
+                }
+            }
+
+            // --- Main Animation Loop ---
+            let allFinished = true;
+            animals.forEach(animal => {
+                if (animal.finished) return;
+
+                allFinished = false;
+
+                // Apply random speed variations to non-scripted animals
+                if (animal.role === 'none' && !animal.isHeld && Math.random() < 0.02) { 
+                    animal.speed += (Math.random() * 2 - 1) * 0.5;
+                }
+
+                // --- Last Two Scenario Gatekeeper (Condition #2) ---
+                if (animal.isHeld && lastTwoScenarioActive) {
+                    const stopPosition = finishLineX - 10;
+                    if (animal.position >= stopPosition) {
+                        animal.position = stopPosition;
+                        animal.speed = 0; // Stop completely
+                    } else {
+                        animal.speed = 0.4; // Move very slowly towards the stop position
+                    }
+                }
+
+                // --- Minimum Race Time Enforcement (Condition #5) ---
+                const isFirstFinisher = unfinishedAnimals.length === animals.length;
+                if (isFirstFinisher && elapsedTime < MIN_RACE_DURATION_MS && animal.position > finishLineX - 1) {
+                    // Approaching finish line too early, slow down
+                    animal.speed *= 0.9;
+                    animal.position = finishLineX - 2;
+                }
+
+                animal.speed = Math.max(0, animal.speed);
+                animal.position += animal.speed;
+
+                // --- Finish Line Check ---
+                if (animal.position >= finishLineX) {
+                    animal.position = finishLineX;
+                    animal.finished = true;
+                    animal.finishTime = performance.now();
+                    
+                    // Check if this finish should release a held animal
+                    const heldAnimal = animals.find(a => a.isHeld);
+                    if (heldAnimal) {
+                        const remainingRunners = animals.filter(a => !a.finished);
+                        // If the held animal is the only one left, release it
+                        if (remainingRunners.length === 1 && remainingRunners[0] === heldAnimal) {
+                            setTimeout(() => {
+                                heldAnimal.isHeld = false;
+                                heldAnimal.speed = 5.0; // Release with a boost
+                            }, 200); // Brief dramatic pause
+                        }
+                    }
+                }
+
+                animal.element.style.transform = `translateX(${animal.position}px)`;
+            });
+
+            if (allFinished) {
+                displayResults();
+                raceActive = false;
+                return;
+            }
+
+            animationFrameId = requestAnimationFrame(race);
+        }
+
+        function displayResults() {
+            const rankedAnimals = [...animals].sort((a, b) => a.finishTime - b.finishTime);
+            const winners = [];
+            const fastestTime = rankedAnimals.length > 0 ? rankedAnimals[0].finishTime : 0;
+
+            if (rankedAnimals.length > 0) {
+                 rankedAnimals.forEach(animal => {
+                    if (animal.finishTime === fastestTime) {
+                        winners.push(animal);
+                    }
+                });
+            }
+           
+            let resultHTML = '';
+            if (winners.length > 0 && winners[0].role === 'winner') {
+                 resultHTML += `<p><span class="winner">${winners[0].emoji} ${winners[0].value}</span> 在最後一刻上演驚天逆轉，率先衝過終點！</p>`;
+            } else if (winners.length === 1) {
+                resultHTML += `<p><span class="winner">${winners[0].emoji} ${winners[0].value}</span> 率先衝過終點！</p>`;
+            } else if (winners.length > 1) {
+                const winnerValues = winners.map(w => `<span class="winner">${w.emoji} ${w.value}</span>`).join('、');
+                resultHTML += `<p>恭喜！以下動物同時衝過終點：${winnerValues}</p>`;
+            } else {
+                resultHTML += '<p>比賽結束，但沒有贏家！</p>';
+            }
+
+            if (rankedAnimals.length > 0) {
+                resultHTML += '<ul class="results-list">';
+                const lastPlaceTime = rankedAnimals[rankedAnimals.length - 1].finishTime;
+
+                rankedAnimals.forEach((animal, index) => {
+                    let classStr = '';
+                    if (animal.finishTime === fastestTime) {
+                        classStr = 'class="rank-first"';
+                    } else if (animal.finishTime === lastPlaceTime && fastestTime !== lastPlaceTime) {
+                        classStr = 'class="rank-last"';
+                    }
+                    resultHTML += `<li ${classStr}>第 ${index + 1} 名: ${animal.emoji} ${animal.value}</li>`;
+                });
+                resultHTML += '</ul>';
+            }
+
+            winnerDisplay.innerHTML = resultHTML;
+
+            populateAndShowModal(rankedAnimals);
+
+            startButton.style.display = 'none';
+            restartButton.style.display = 'inline-block';
+            startButton.disabled = false;
+        }
+        
+        function populateAndShowModal(rankedAnimals) {
+            if (rankedAnimals.length === 0) return;
+
+            const winner = rankedAnimals[0];
+            const lastPlace = rankedAnimals[rankedAnimals.length - 1];
+
+            if (winner.role === 'winner') {
+                 modalTitle.innerHTML = `🏆 驚天逆轉！<br><span class="winner-first">${winner.emoji} ${winner.value}</span> 獲勝！`;
+            } else {
+                 modalTitle.innerHTML = `🎉 恭喜 <span class="winner-first">${winner.emoji} ${winner.value}</span> 獲勝！ 🎉`;
+            }
+            
+            modalRankings.innerHTML = '';
+            rankedAnimals.forEach((animal, index) => {
+                const li = document.createElement('li');
+                let rankText = `${index + 1}. ${animal.emoji} ${animal.value}`;
+                if (index === 0) {
+                    li.classList.add('winner-first');
+                    rankText += " 🏆";
+                }
+                li.innerHTML = rankText;
+                modalRankings.appendChild(li);
+            });
+
+            if (rankedAnimals.length > 1 && winner.finishTime !== lastPlace.finishTime) {
+                modalLastPlace.innerHTML = `😢 別灰心，${lastPlace.emoji} ${lastPlace.value}，下次還有機會！`;
+                modalLastPlace.style.display = 'block';
+            } else {
+                modalLastPlace.style.display = 'none';
+            }
+
+            resultsModal.classList.add('visible');
+        }
+
+        function resetRace() {
+            raceActive = false;
+            cancelAnimationFrame(animationFrameId);
+            
+            clearInputErrors();
+            winnerDisplay.innerHTML = '<p>等待競賽開始...</p>';
+            raceTrack.innerHTML = '<div class="finish-line"></div>';
+            
+            restartButton.style.display = 'none';
+            startButton.style.display = 'inline-block';
+            
+            resultsModal.classList.remove('visible');
+        }
+
+        // Event Listeners
+        function toggleSettings() {
+            settingsPanel.classList.toggle('expanded');
+            if (settingsPanel.classList.contains('expanded')) {
+                toggleSettingsButton.textContent = '隱藏設定';
+            } else {
+                toggleSettingsButton.textContent = '顯示設定';
+            }
+        }
+
+        settingsHeader.addEventListener('click', toggleSettings);
+        startButton.addEventListener('click', initializeRace);
+        restartButton.addEventListener('click', resetRace);
+        closeModalButton.addEventListener('click', () => {
+            resultsModal.classList.remove('visible');
+        });
+        
+        numAnimalsInput.addEventListener('input', clearInputErrors);
+        optionsInput.addEventListener('input', clearInputErrors);
+
+        window.addEventListener('load', () => {
+            calculateFinishLine();
+            const numAnimals = parseInt(numAnimalsInput.value);
+            const animalHeight = 50;
+            const minTrackHeight = (numAnimals * animalHeight) + ((numAnimals + 1) * 15);
+            raceTrack.style.minHeight = `${Math.max(200, minTrackHeight)}px`;
+        });
+        
+        window.addEventListener('resize', calculateFinishLine);
+
+        numAnimalsInput.addEventListener('input', () => {
+            const numAnimals = parseInt(numAnimalsInput.value) || 0;
+            const animalHeight = 50;
+            const minTrackHeight = (numAnimals * animalHeight) + ((numAnimals + 1) * 15);
+            raceTrack.style.minHeight = `${Math.max(200, minTrackHeight)}px`;
+        });
+
+    </script>
+</body>
+</html>
